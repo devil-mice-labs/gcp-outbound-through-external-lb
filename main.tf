@@ -13,15 +13,17 @@ data "google_compute_zones" "main" {
 }
 
 resource "google_compute_network" "untrusted" {
-  name                    = "untrusted"
-  auto_create_subnetworks = false
-  depends_on              = [google_project_service.compute]
+  name                            = "untrusted"
+  auto_create_subnetworks         = false
+  delete_default_routes_on_create = true
+  depends_on                      = [google_project_service.compute]
 }
 
 resource "google_compute_network" "trusted" {
-  name                    = "trusted"
-  auto_create_subnetworks = false
-  depends_on              = [google_project_service.compute]
+  name                            = "trusted"
+  auto_create_subnetworks         = false
+  delete_default_routes_on_create = true
+  depends_on                      = [google_project_service.compute]
 }
 
 resource "google_compute_subnetwork" "untrusted" {
@@ -131,7 +133,6 @@ resource "google_compute_region_health_check" "port_22" {
   healthy_threshold   = 1
   timeout_sec         = 1
   unhealthy_threshold = 1
-
   tcp_health_check {
     port = 22
   }
@@ -143,16 +144,13 @@ resource "google_compute_region_backend_service" "external" {
   load_balancing_scheme = "EXTERNAL"
   protocol              = "UNSPECIFIED"
   health_checks         = [google_compute_region_health_check.port_22.self_link]
-
   backend {
     group = google_compute_instance_group.main[0].self_link
   }
-
   backend {
     group    = google_compute_instance_group.main[1].self_link
     failover = true
   }
-
   connection_tracking_policy {
     tracking_mode                                = "PER_SESSION"
     connection_persistence_on_unhealthy_backends = "NEVER_PERSIST"
@@ -173,16 +171,13 @@ resource "google_compute_region_backend_service" "internal" {
   connection_draining_timeout_sec = 300
   network                         = google_compute_network.trusted.self_link
   health_checks                   = [google_compute_region_health_check.port_22.self_link]
-
   backend {
     group = google_compute_instance_group.main[0].self_link
   }
-
   backend {
     group    = google_compute_instance_group.main[1].self_link
     failover = true
   }
-
   failover_policy {
     disable_connection_drain_on_failover = false
     drop_traffic_if_unhealthy            = false
